@@ -13,16 +13,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      # android-actions/setup-android bundles a recent `sdkmanager` that requires JDK 17+ just
+      # to accept the SDK licenses, so it must run under JDK 17 even though the actual Gradle
+      # build below needs JDK 8 for this project's old AGP/Gradle versions.
+      - name: Set up JDK 17 (for the Android SDK manager)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '17'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: 'platforms;android-25 build-tools;25.0.2 platform-tools'
+
+      - name: Set up JDK 8 (for the Gradle build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
