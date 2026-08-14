@@ -3,7 +3,10 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
     repositories {
-        jcenter()
+        // JCenter (Bintray) was permanently shut down; the artifacts this project depends on
+        // are mirrored on Google's Maven repo and Maven Central instead.
+        google()
+        mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
@@ -16,7 +19,8 @@ buildscript {
 
 allprojects {
     repositories {
-        jcenter()
+        google()
+        mavenCentral()
         maven { url "https://jitpack.io" }
     }
 
