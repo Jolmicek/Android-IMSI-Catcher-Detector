@@ -27,6 +27,9 @@ allprojects {
         maven { url "https://maven.google.com" }
         mavenCentral()
         maven { url "https://jitpack.io" }
+        // io.realm:realm-android-library:3.1.1 (pulled in automatically by the Realm Gradle
+        // plugin) is also JCenter-only; see the comment in the buildscript block above.
+        maven { url "https://maven.aliyun.com/repository/jcenter" }
     }
 
     if (System.getenv("BLDZR_BUILD_NUMBER") != null) {
