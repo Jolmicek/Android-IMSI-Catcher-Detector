@@ -1,0 +1,38 @@
+name: Build debug APK
+
+on:
+  push:
+    branches:
+      - fix/ber-parseint-crash
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-25 build-tools;25.0.2 platform-tools'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build normal-flavor debug APK
+        run: ./gradlew assembleNormalDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AIMSICD-normal-debug-apk
+          path: AIMSICD/build/outputs/apk/**/*.apk
+          if-no-files-found: error
