@@ -8,6 +8,7 @@ package com.secupwn.aimsicd.service;
 import android.content.Context;
 
 import com.secupwn.aimsicd.utils.RealmHelper;
+import com.secupwn.aimsicd.utils.SignalStrengthUtils;
 
 import java.util.HashMap;
 
@@ -73,6 +74,13 @@ public class SignalStrengthTracker {
      */
     public void registerSignalStrength(int cellID, int signalStrength) {
 
+        // Never let an AOS "unknown" sentinel (Integer.MAX_VALUE, 99, -1, ...) into the
+        // averages: it would poison every later comparison for this cell.
+        if (!SignalStrengthUtils.isValidDbm(signalStrength)) {
+            log.debug("Ignored unknown signal strength ({}) for CID: {}", signalStrength, cellID);
+            return;
+        }
+
         // Returns the current time in milliseconds since January 1, 1970 00:00:00.0 UTC.
         //   "This method shouldn't be used for measuring timeouts or other elapsed time
         //   measurements, as changing the system time can affect the results.
@@ -134,6 +142,12 @@ public class SignalStrengthTracker {
             return false;
         }
 
+        // An unknown reading cannot be mysterious, and comparing it would overflow below.
+        if (!SignalStrengthUtils.isValidDbm(signalStrength)) {
+            log.debug("Cannot check signal strength for CID: {} because the reading ({}) is unknown.", cellID, signalStrength);
+            return false;
+        }
+
         int storedAvg;
 
         // Cached?
@@ -144,16 +158,22 @@ public class SignalStrengthTracker {
             // Not cached, check DB
             @Cleanup Realm realm = Realm.getDefaultInstance();
             storedAvg = mDbHelper.getAverageSignalStrength(realm, cellID);
-            averageSignalCache.put(cellID, storedAvg);
             log.debug("Average SS in DB for  CID: {} is: {}", cellID, storedAvg);
+            if (SignalStrengthUtils.isValidDbm(storedAvg)) {
+                // Only cache usable averages, otherwise the cell would stay "unknown" forever
+                averageSignalCache.put(cellID, storedAvg);
+            }
         }
 
-        boolean result;
-        if (storedAvg > signalStrength) {
-            result = storedAvg - signalStrength > mysteriousSignalDifference;
-        } else {
-            result = signalStrength - storedAvg > mysteriousSignalDifference;
+        // No usable history yet (the DB average is 0 when the cell has no samples). Without
+        // this check every first-seen cell looked mysterious, since |0 - (-95)| > 10.
+        if (!SignalStrengthUtils.isValidDbm(storedAvg)) {
+            log.debug("No usable average signal strength stored for CID: {} yet.", cellID);
+            return false;
         }
+
+        // Widened to long: |MAX_VALUE - (-95)| used to overflow into a negative number
+        boolean result = Math.abs((long) storedAvg - (long) signalStrength) > mysteriousSignalDifference;
         log.debug("Signal Strength mystery check for CID: {} is {}, avg:{}, this signal: {}", cellID, result, storedAvg, signalStrength);
         return result;
     }
