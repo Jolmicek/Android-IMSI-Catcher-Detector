@@ -4,8 +4,9 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 buildscript {
     repositories {
         // JCenter (Bintray) was permanently shut down; the artifacts this project depends on
-        // are mirrored on Google's Maven repo and Maven Central instead.
-        google()
+        // are mirrored on Google's Maven repo and Maven Central instead. Gradle 3.5 predates
+        // the google() repository shorthand (added in Gradle 4.1), so use its URL directly.
+        maven { url "https://maven.google.com" }
         mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
     }
@@ -19,7 +20,7 @@ buildscript {
 
 allprojects {
     repositories {
-        google()
+        maven { url "https://maven.google.com" }
         mavenCentral()
         maven { url "https://jitpack.io" }
     }
