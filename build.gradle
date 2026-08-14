@@ -9,6 +9,10 @@ buildscript {
         maven { url "https://maven.google.com" }
         mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
+        // com.android.tools.build:gradle:2.3.1 and io.realm:realm-gradle-plugin:3.1.1 predate
+        // Google's Maven repo taking over AGP distribution and were only ever published to the
+        // now-dead JCenter. This is a community mirror that still carries old JCenter artifacts.
+        maven { url "https://maven.aliyun.com/repository/jcenter" }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:2.3.1'
