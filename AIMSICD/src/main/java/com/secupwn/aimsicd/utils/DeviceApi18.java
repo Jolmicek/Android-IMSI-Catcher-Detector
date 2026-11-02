@@ -56,7 +56,7 @@ public class DeviceApi18 {
                         final CellSignalStrengthGsm gsm = ((CellInfoGsm) info).getCellSignalStrength();
                         final CellIdentityGsm identityGsm = ((CellInfoGsm) info).getCellIdentity();
                         // Signal Strength
-                        pDevice.cell.setDbm(gsm.getDbm()); // [dBm]
+                        pDevice.cell.setDbm(SignalStrengthUtils.sanitizeDbm(gsm.getDbm())); // [dBm]
                         // Cell Identity
                         pDevice.cell.setCellId(identityGsm.getCid());
                         pDevice.cell.setMobileCountryCode(identityGsm.getMcc());
@@ -67,7 +67,7 @@ public class DeviceApi18 {
                         final CellSignalStrengthCdma cdma = ((CellInfoCdma) info).getCellSignalStrength();
                         final CellIdentityCdma identityCdma = ((CellInfoCdma) info).getCellIdentity();
                         // Signal Strength
-                        pDevice.cell.setDbm(cdma.getDbm());
+                        pDevice.cell.setDbm(SignalStrengthUtils.sanitizeDbm(cdma.getDbm()));
                         // Cell Identity
                         pDevice.cell.setCellId(identityCdma.getBasestationId());
                         pDevice.cell.setMobileNetworkCode(identityCdma.getSystemId());
@@ -78,7 +78,7 @@ public class DeviceApi18 {
                         final CellSignalStrengthLte lte = ((CellInfoLte) info).getCellSignalStrength();
                         final CellIdentityLte identityLte = ((CellInfoLte) info).getCellIdentity();
                         // Signal Strength
-                        pDevice.cell.setDbm(lte.getDbm());
+                        pDevice.cell.setDbm(SignalStrengthUtils.sanitizeDbm(lte.getDbm()));
                         pDevice.cell.setTimingAdvance(lte.getTimingAdvance());
                         // Cell Identity
                         pDevice.cell.setMobileCountryCode(identityLte.getMcc());
@@ -89,7 +89,7 @@ public class DeviceApi18 {
                         final CellSignalStrengthWcdma wcdma = ((CellInfoWcdma) info).getCellSignalStrength();
                         final CellIdentityWcdma identityWcdma = ((CellInfoWcdma) info).getCellIdentity();
                         // Signal Strength
-                        pDevice.cell.setDbm(wcdma.getDbm());
+                        pDevice.cell.setDbm(SignalStrengthUtils.sanitizeDbm(wcdma.getDbm()));
                         // Cell Identity
                         pDevice.cell.setLocationAreaCode(identityWcdma.getLac());
                         pDevice.cell.setMobileCountryCode(identityWcdma.getMcc());

@@ -38,6 +38,7 @@ import com.secupwn.aimsicd.utils.DeviceApi18;
 import com.secupwn.aimsicd.utils.Helpers;
 import com.secupwn.aimsicd.utils.Icon;
 import com.secupwn.aimsicd.utils.RealmHelper;
+import com.secupwn.aimsicd.utils.SignalStrengthUtils;
 import com.secupwn.aimsicd.utils.TinyDB;
 
 import java.util.ArrayList;
@@ -774,28 +775,58 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
          *              See note in : SignalStrengthTracker.java
          */
         public void onSignalStrengthsChanged(SignalStrength signalStrength) {
-            // Update Signal Strength
-            if (signalStrength.isGsm()) {
-                int dbm;
-                if (signalStrength.getGsmSignalStrength() <= 2 ||
-                        signalStrength.getGsmSignalStrength() == NeighboringCellInfo.UNKNOWN_RSSI) {
-                    // Unknown signal strength, get it another way
-                    String[] bits = signalStrength.toString().split(" ");
-                    dbm = Integer.parseInt(bits[9]);
-                } else {
-                    dbm = signalStrength.getGsmSignalStrength();
-                }
-                device.setSignalDbm(dbm);
-            } else {
-                int evdoDbm = signalStrength.getEvdoDbm();
-                int cdmaDbm = signalStrength.getCdmaDbm();
-
-                // Use lowest signal to be conservative
-                device.setSignalDbm((cdmaDbm < evdoDbm) ? cdmaDbm : evdoDbm);
+            int dbm;
+            try {
+                dbm = extractDbm(signalStrength);
+            } catch (RuntimeException e) {
+                // An exception escaping this callback kills the whole process (the UI died on
+                // "ber=2147483647" while the sticky service kept being restarted), so never let
+                // an unexpected modem/AOS response propagate out of here.
+                log.error("onSignalStrengthsChanged: unable to read signal strength", e);
+                dbm = SignalStrengthUtils.UNKNOWN_DBM;
             }
+
+            if (!SignalStrengthUtils.isValidDbm(dbm)) {
+                // No usable measurement: keep the last known value instead of storing a sentinel
+                log.debug("onSignalStrengthsChanged: no usable signal strength in [{}]", signalStrength);
+                return;
+            }
+
+            // Update Signal Strength
+            device.setSignalDbm(dbm);
             // Send it to signal tracker
-            signalStrengthTracker.registerSignalStrength(device.cell.getCellId(), device.getSignalDBm());
+            signalStrengthTracker.registerSignalStrength(device.cell.getCellId(), dbm);
             //signalStrengthTracker.isMysterious(device.cell.getCid(), device.getSignalDBm());
+        }
+
+        /**
+         * Extracts the received power in [dBm] from a {@link SignalStrength} report.
+         *
+         * Every getter used here returns an "unknown" sentinel (usually
+         * {@code Integer.MAX_VALUE}, or 99 in ASU) when the modem has nothing to report, so
+         * each one is sanitized before it can reach the DB or the mysterious-signal logic.
+         *
+         * @return the received power in [dBm], or {@link SignalStrengthUtils#UNKNOWN_DBM}
+         */
+        private int extractDbm(SignalStrength signalStrength) {
+            if (!signalStrength.isGsm()) {
+                // Both getters return Integer.MAX_VALUE when unavailable, and the old
+                // min(cdma, evdo) picked that sentinel whenever both were unknown.
+                return SignalStrengthUtils.lowestKnownDbm(
+                        signalStrength.getCdmaDbm(),
+                        signalStrength.getEvdoDbm());
+            }
+
+            // getGsmSignalStrength() is ASU [0-31] (99 == unknown), NOT dBm.
+            int dbm = SignalStrengthUtils.gsmAsuToDbm(signalStrength.getGsmSignalStrength());
+            if (SignalStrengthUtils.isValidDbm(dbm)) {
+                return dbm;
+            }
+
+            // Unknown ASU: the only remaining source is the non-API toString() dump, which is
+            // parsed by field name. Reading a fixed token position is what used to crash with
+            // NumberFormatException: For input string: "ber=2147483647".
+            return SignalStrengthUtils.parseDbmFromString(signalStrength.toString());
         }
 
         // In DB:   No,In,Ou,IO,Do
